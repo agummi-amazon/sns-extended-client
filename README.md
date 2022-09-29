@@ -1,19 +1,18 @@
 # sqs-extended-client
 
-### Implements the functionality of [amazon-sqs-java-extended-client-lib](https://github.com/awslabs/amazon-sqs-java-extended-client-lib) in Python
+### Implements the functionality of [amazon-sns-java-extended-client-lib](https://github.com/awslabs/amazon-sns-java-extended-client-lib) in Python
 
 ## Installation
 ```
-pip install sqs-extended-client
+under construction
 ```
 
 
 ## Overview
-sqs-extended-client allows for sending large messages through SQS via S3. This is the same mechanism that the Amazon library
-[amazon-sqs-java-extended-client-lib](https://github.com/awslabs/amazon-sqs-java-extended-client-lib) provides. This library is
-interoperable with that library.
+sns-extended-client allows for publishing large messages through SNS via S3. This is the same mechanism that the Amazon library
+[amazon-sns-java-extended-client-lib](https://github.com/awslabs/amazon-sns-java-extended-client-lib) provides.
 
-To do this, this library automatically extends the normal boto3 SQS client and Queue resource classes upon import using the [botoinator](https://github.com/QuiNovas/botoinator) library. This allows for further extension or decoration if desired.
+To do this, this library automatically extends the normal boto3 SNS client and Topic resource classes upon import using the [botoinator](https://github.com/QuiNovas/botoinator) library. This allows for further extension or decoration if desired.
 
 ## Additional attributes available on `boto3` SQS `client` and `Queue` objects
 * large_payload_support -- the S3 bucket name that will store large messages.

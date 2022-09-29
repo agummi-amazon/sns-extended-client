@@ -126,23 +126,23 @@ def _store_in_s3(self, queue_url, message_attributes, message_body):
   return message_attributes, message_body
 
 
-def _retrieve_from_s3(self, message_attributes, message_body, receipt_handle):
-  if (message_attributes.pop(RESERVED_ATTRIBUTE_NAME, None)):
-    s3_message_body = jsonloads(message_body)
-    if isinstance(s3_message_body, list) and len(s3_message_body) == 2 and s3_message_body[0] == MESSAGE_POINTER_CLASS:
-      payload = jsonloads(message_body)[1]
-      s3_bucket_name = payload['s3BucketName']
-      s3_key = payload['s3Key']
-      message_body = self.s3.Object(s3_bucket_name, s3_key).get()['Body'].read().decode()
-      receipt_handle_params = {
-        'S3_BUCKET_NAME_MARKER': S3_BUCKET_NAME_MARKER,
-        'bucket': s3_bucket_name,
-        'S3_KEY_MARKER': S3_KEY_MARKER,
-        'key': s3_key,
-        'receipt_handle': receipt_handle
-      }
-      receipt_handle = '{S3_BUCKET_NAME_MARKER}{bucket}{S3_BUCKET_NAME_MARKER}{S3_KEY_MARKER}{key}{S3_KEY_MARKER}{receipt_handle}'.format(**receipt_handle_params)
-  return message_attributes, message_body, receipt_handle
+# def _retrieve_from_s3(self, message_attributes, message_body, receipt_handle):
+#   if (message_attributes.pop(RESERVED_ATTRIBUTE_NAME, None)):
+#     s3_message_body = jsonloads(message_body)
+#     if isinstance(s3_message_body, list) and len(s3_message_body) == 2 and s3_message_body[0] == MESSAGE_POINTER_CLASS:
+#       payload = jsonloads(message_body)[1]
+#       s3_bucket_name = payload['s3BucketName']
+#       s3_key = payload['s3Key']
+#       message_body = self.s3.Object(s3_bucket_name, s3_key).get()['Body'].read().decode()
+#       receipt_handle_params = {
+#         'S3_BUCKET_NAME_MARKER': S3_BUCKET_NAME_MARKER,
+#         'bucket': s3_bucket_name,
+#         'S3_KEY_MARKER': S3_KEY_MARKER,
+#         'key': s3_key,
+#         'receipt_handle': receipt_handle
+#       }
+#       receipt_handle = '{S3_BUCKET_NAME_MARKER}{bucket}{S3_BUCKET_NAME_MARKER}{S3_KEY_MARKER}{key}{S3_KEY_MARKER}{receipt_handle}'.format(**receipt_handle_params)
+#   return message_attributes, message_body, receipt_handle
 
 
 def _add_custom_attributes(class_attributes):
@@ -190,63 +190,63 @@ def _add_queue_resource_custom_attributes(class_attributes, **kwargs):
   _add_custom_attributes(class_attributes)  
 
 
-def _delete_decorator(func):
-  def _delete(*args, **kwargs):
-    match = RECEIPT_HANDLER_MATCHER.match(args[0].receipt_handle)
-    if match:
-      args[0].Queue().s3.Bucket(match.group(1)).delete_objects(
-        Delete={
-          'Objects': [
-            {
-              'Key': match.group(2)
-            }
-          ],
-          'Quiet': True
-        }
-      )
-      args[0].receipt_handle = match.group(3)
-    return func(*args, **kwargs)
-  return _delete
+# def _delete_decorator(func):
+#   def _delete(*args, **kwargs):
+#     match = RECEIPT_HANDLER_MATCHER.match(args[0].receipt_handle)
+#     if match:
+#       args[0].Queue().s3.Bucket(match.group(1)).delete_objects(
+#         Delete={
+#           'Objects': [
+#             {
+#               'Key': match.group(2)
+#             }
+#           ],
+#           'Quiet': True
+#         }
+#       )
+#       args[0].receipt_handle = match.group(3)
+#     return func(*args, **kwargs)
+#   return _delete
 
 
-def _delete_message_decorator(func):
-  def _delete_message(*args, **kwargs):
-    match = RECEIPT_HANDLER_MATCHER.match(kwargs['ReceiptHandle'])
-    if match:
-      args[0].s3.Bucket(match.group(1)).delete_objects(
-        Delete={
-          'Objects': [
-            {
-              'Key': match.group(2)
-            }
-          ],
-          'Quiet': True
-        }
-      )
-      kwargs['ReceiptHandle'] = match.group(3)
-    return func(*args, **kwargs)
-  return _delete_message
+# def _delete_message_decorator(func):
+#   def _delete_message(*args, **kwargs):
+#     match = RECEIPT_HANDLER_MATCHER.match(kwargs['ReceiptHandle'])
+#     if match:
+#       args[0].s3.Bucket(match.group(1)).delete_objects(
+#         Delete={
+#           'Objects': [
+#             {
+#               'Key': match.group(2)
+#             }
+#           ],
+#           'Quiet': True
+#         }
+#       )
+#       kwargs['ReceiptHandle'] = match.group(3)
+#     return func(*args, **kwargs)
+#   return _delete_message
 
 
-def _delete_message_batch_decorator(func):
-  def _delete_message_batch(*args, **kwargs):
-    bucket_objects = {}
-    for entry in kwargs['Entries']:
-      match = RECEIPT_HANDLER_MATCHER.match(entry['ReceiptHandle'])
-      if match:
-        if match.group(1) not in bucket_objects:
-          bucket_objects[match.group(1)] = []
-        bucket_objects[match.group(1)].append({'Key': match.group(2)})
-        entry['ReceiptHandle'] = match.group(3)
-    for bucket, objects in bucket_objects.items():
-      args[0].s3.Bucket(bucket).delete_objects(
-        Delete={
-          'Objects': objects,
-          'Quiet': True
-        }
-      )
-    return func(*args, **kwargs)
-  return _delete_message_batch
+# def _delete_message_batch_decorator(func):
+#   def _delete_message_batch(*args, **kwargs):
+#     bucket_objects = {}
+#     for entry in kwargs['Entries']:
+#       match = RECEIPT_HANDLER_MATCHER.match(entry['ReceiptHandle'])
+#       if match:
+#         if match.group(1) not in bucket_objects:
+#           bucket_objects[match.group(1)] = []
+#         bucket_objects[match.group(1)].append({'Key': match.group(2)})
+#         entry['ReceiptHandle'] = match.group(3)
+#     for bucket, objects in bucket_objects.items():
+#       args[0].s3.Bucket(bucket).delete_objects(
+#         Delete={
+#           'Objects': objects,
+#           'Quiet': True
+#         }
+#       )
+#     return func(*args, **kwargs)
+#   return _delete_message_batch
 
 
 def _send_message_decorator(func):
@@ -275,59 +275,59 @@ def _send_message_batch_decorator(func):
   return _send_message_batch
 
 
-def _receive_message_decorator(func):
-  def _receive_message(*args, **kwargs):
-    if 'MessageAttributeNames' not in kwargs:
-      kwargs['MessageAttributeNames'] = []
-    assert isinstance(kwargs['MessageAttributeNames'], list), 'MessageAttributeNames must be a list'
-    if RESERVED_ATTRIBUTE_NAME not in kwargs['MessageAttributeNames'] and \
-        not ('All' in kwargs['MessageAttributeNames'] or '.*' in kwargs['MessageAttributeNames']):
-      kwargs['MessageAttributeNames'].append(RESERVED_ATTRIBUTE_NAME)
-    response = func(*args, **kwargs)
-    messages = response.get('Messages', [])
-    if messages:
-      iterables = [ [ None for _ in range(len(messages)) ] for _ in range(3) ]
-      for index in range(len(messages)):
-        iterables[0][index] = messages[index].get('MessageAttributes', {})
-        iterables[1][index] = messages[index]['Body']
-        iterables[2][index] = messages[index]['ReceiptHandle']
-      with ThreadPoolExecutor(max_workers=len(messages)) as executor:
-        retrieve_results = list(executor.map(args[0]._retrieve_from_s3, *iterables))
-      for index in range(len(messages)):
-        messages[index]['MessageAttributes'] = retrieve_results[index][0]
-        messages[index]['Body'] = retrieve_results[index][1]
-        messages[index]['ReceiptHandle'] = retrieve_results[index][2]
-    return response
-  return _receive_message
+# def _receive_message_decorator(func):
+#   def _receive_message(*args, **kwargs):
+#     if 'MessageAttributeNames' not in kwargs:
+#       kwargs['MessageAttributeNames'] = []
+#     assert isinstance(kwargs['MessageAttributeNames'], list), 'MessageAttributeNames must be a list'
+#     if RESERVED_ATTRIBUTE_NAME not in kwargs['MessageAttributeNames'] and \
+#         not ('All' in kwargs['MessageAttributeNames'] or '.*' in kwargs['MessageAttributeNames']):
+#       kwargs['MessageAttributeNames'].append(RESERVED_ATTRIBUTE_NAME)
+#     response = func(*args, **kwargs)
+#     messages = response.get('Messages', [])
+#     if messages:
+#       iterables = [ [ None for _ in range(len(messages)) ] for _ in range(3) ]
+#       for index in range(len(messages)):
+#         iterables[0][index] = messages[index].get('MessageAttributes', {})
+#         iterables[1][index] = messages[index]['Body']
+#         iterables[2][index] = messages[index]['ReceiptHandle']
+#       with ThreadPoolExecutor(max_workers=len(messages)) as executor:
+#         retrieve_results = list(executor.map(args[0]._retrieve_from_s3, *iterables))
+#       for index in range(len(messages)):
+#         messages[index]['MessageAttributes'] = retrieve_results[index][0]
+#         messages[index]['Body'] = retrieve_results[index][1]
+#         messages[index]['ReceiptHandle'] = retrieve_results[index][2]
+#     return response
+#   return _receive_message
 
 
-def _receive_messages_decorator(func):
-  def _receive_messages(*args, **kwargs):
-    if 'MessageAttributeNames' not in kwargs:
-      kwargs['MessageAttributeNames'] = []
-    assert isinstance(kwargs['MessageAttributeNames'], list), 'MessageAttributeNames must be a list'
-    if RESERVED_ATTRIBUTE_NAME not in kwargs['MessageAttributeNames'] and \
-        not ('All' in kwargs['MessageAttributeNames'] or '.*' in kwargs['MessageAttributeNames']):
-      kwargs['MessageAttributeNames'].append(RESERVED_ATTRIBUTE_NAME)
-    messages = func(*args, **kwargs)
-    if messages:
-      iterables = [ [ None for _ in range(len(messages)) ] for _ in range(3) ]
-      for index in range(len(messages)):
-        iterables[0][index] = messages[index].message_attributes or {}
-        iterables[1][index] = messages[index].body
-        iterables[2][index] = messages[index].receipt_handle
-      with ThreadPoolExecutor(max_workers=len(messages)) as executor:
-        retrieve_results = list(executor.map(args[0]._retrieve_from_s3, *iterables))
-      for index in range(len(messages)):
-        messages[index].message_attributes = retrieve_results[index][0]
-        messages[index].body = retrieve_results[index][1]
-        messages[index].receipt_handle = retrieve_results[index][2]
-        setattr(messages[index], '_origin_queue', args[0])
-    return messages
-  return _receive_messages
+# def _receive_messages_decorator(func):
+#   def _receive_messages(*args, **kwargs):
+#     if 'MessageAttributeNames' not in kwargs:
+#       kwargs['MessageAttributeNames'] = []
+#     assert isinstance(kwargs['MessageAttributeNames'], list), 'MessageAttributeNames must be a list'
+#     if RESERVED_ATTRIBUTE_NAME not in kwargs['MessageAttributeNames'] and \
+#         not ('All' in kwargs['MessageAttributeNames'] or '.*' in kwargs['MessageAttributeNames']):
+#       kwargs['MessageAttributeNames'].append(RESERVED_ATTRIBUTE_NAME)
+#     messages = func(*args, **kwargs)
+#     if messages:
+#       iterables = [ [ None for _ in range(len(messages)) ] for _ in range(3) ]
+#       for index in range(len(messages)):
+#         iterables[0][index] = messages[index].message_attributes or {}
+#         iterables[1][index] = messages[index].body
+#         iterables[2][index] = messages[index].receipt_handle
+#       with ThreadPoolExecutor(max_workers=len(messages)) as executor:
+#         retrieve_results = list(executor.map(args[0]._retrieve_from_s3, *iterables))
+#       for index in range(len(messages)):
+#         messages[index].message_attributes = retrieve_results[index][0]
+#         messages[index].body = retrieve_results[index][1]
+#         messages[index].receipt_handle = retrieve_results[index][2]
+#         setattr(messages[index], '_origin_queue', args[0])
+#     return messages
+#   return _receive_messages
 
  
-class SQSExtendedClientSession(botoinator.session.DecoratedSession):
+class SNSExtendedClientSession(botoinator.session.DecoratedSession):
 
 
   def __init__(self, aws_access_key_id=None, aws_secret_access_key=None,
@@ -341,16 +341,30 @@ class SQSExtendedClientSession(botoinator.session.DecoratedSession):
       botocore_session=botocore_session,
       profile_name=profile_name
     )
+
+    # Find out if the below 3 things are required
     self.events.register('creating-client-class.sqs', _add_client_custom_attributes)
     self.events.register('creating-resource-class.sqs.Queue', _add_queue_resource_custom_attributes)
     self.events.register('creating-resource-class.sqs.Message', _add_message_resource_custom_attributes)
-    self.register_client_decorator('sqs', 'delete_message', _delete_message_decorator)
-    self.register_client_decorator('sqs', 'delete_message_batch', _delete_message_batch_decorator)
+
+
+    # self.register_client_decorator('sqs', 'delete_message', _delete_message_decorator)
+    # self.register_client_decorator('sqs', 'delete_message_batch', _delete_message_batch_decorator)
+    
+    
+    
     self.register_client_decorator('sqs', 'send_message', _send_message_decorator)
     self.register_client_decorator('sqs', 'send_message_batch', _send_message_batch_decorator)
-    self.register_client_decorator('sqs', 'receive_message', _receive_message_decorator)
-    self.register_resource_decorator('sqs', 'Queue', 'delete_messages', _delete_message_batch_decorator)
+    
+    
+    # self.register_client_decorator('sqs', 'receive_message', _receive_message_decorator)
+    # self.register_resource_decorator('sqs', 'Queue', 'delete_messages', _delete_message_batch_decorator)
+    
+    
+    
     self.register_resource_decorator('sqs', 'Queue', 'send_message', _send_message_decorator)
     self.register_resource_decorator('sqs', 'Queue', 'send_messages', _send_message_batch_decorator)
-    self.register_resource_decorator('sqs', 'Queue', 'receive_messages', _receive_messages_decorator)
-    self.register_resource_decorator('sqs', 'Message', 'delete', _delete_decorator)
+    
+    
+    # self.register_resource_decorator('sqs', 'Queue', 'receive_messages', _receive_messages_decorator)
+    # self.register_resource_decorator('sqs', 'Message', 'delete', _delete_decorator)
