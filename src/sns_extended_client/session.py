@@ -9,6 +9,7 @@ DEFAULT_MESSAGE_SIZE_THRESHOLD = 262144
 MESSAGE_POINTER_CLASS = 'com.amazon.sqs.javamessaging.MessageS3Pointer'
 RECEIPT_HANDLER_MATCHER = re.compile(r"^-\.\.s3BucketName\.\.-(.*)-\.\.s3BucketName\.\.--\.\.s3Key\.\.-(.*)-\.\.s3Key\.\.-(.*)")
 RESERVED_ATTRIBUTE_NAME = 'ExtendedPayloadSize'
+# TODO Add legacy reserved_message_attribute = 'SQSLargePayloadSize'
 S3_KEY_ATTRIBUTE_NAME = 'S3Key'
 S3_BUCKET_NAME_MARKER = "-..s3BucketName..-"
 S3_KEY_MARKER = "-..s3Key..-"
@@ -129,7 +130,7 @@ def _determine_payload(self, topicArn, message_attributes, message_body, message
     message_attributes[RESERVED_ATTRIBUTE_NAME]['DataType'] = 'Number'
     message_attributes[RESERVED_ATTRIBUTE_NAME]['StringValue'] = str(len(encoded_body))
 
-    s3_key = message_attributes.get(S3_KEY_ATTRIBUTE_NAME, str(uuid4())) #user specified key or we generate one
+    s3_key = message_attributes.get(S3_KEY_ATTRIBUTE_NAME, str(uuid4())) # user specified key or we generate one
     self.s3.Object(self.large_payload_support, s3_key).put(**self._create_s3_put_object_params(encoded_body, topicArn))
     message_body = jsondumps([MESSAGE_POINTER_CLASS, {'s3BucketName': self.large_payload_support, 's3Key': s3_key}])
 
@@ -175,7 +176,6 @@ def _publish_decorator(func):
   def _publish(*args, **kwargs):
     topicARN = kwargs.get('TopicArn') if 'TopicArn' in kwargs else args[0].arn
     kwargs['MessageAttributes'], kwargs['Message'] = args[0]._determine_payload(topicARN, kwargs.get('MessageAttributes', {}), kwargs['Message'], kwargs.get('MessageStructure', None))
-    print(kwargs['MessageAttributes'], 'abcd')
     return func(*args, **kwargs)
 
   return _publish
@@ -198,7 +198,6 @@ class SNSExtendedClientSession(botoinator.session.DecoratedSession):
 
     self.events.register('creating-client-class.sns', _add_client_custom_attributes)
     self.events.register('creating-resource-class.sns.Topic', _add_topic_resource_custom_attributes)
-    # self.events.register('creating-resource-class.sqs.Message', _add_message_resource_custom_attributes)  
-    
+    # TODO register platform endpoint client resource
     self.register_client_decorator('sns', 'publish', _publish_decorator)
     self.register_resource_decorator('sns', 'Topic', 'publish', _publish_decorator)
